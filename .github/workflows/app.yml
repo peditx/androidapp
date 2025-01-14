@@ -1,0 +1,131 @@
+name: Convert Website to APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      website_url:
+        description: 'URL of the website to convert to APK'
+        required: true
+        default: 'http://peditxrt.lan/'
+
+jobs:
+  convert-to-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up JDK
+      uses: actions/setup-java@v3
+      with:
+        java-version: '11'
+        distribution: 'adopt'
+
+    - name: Install required packages
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y curl unzip
+
+    - name: Download and install Android SDK
+      run: |
+        mkdir -p android-sdk
+        cd android-sdk
+        curl -o sdk-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-6609375_latest.zip
+        unzip sdk-tools.zip
+        yes | ./cmdline-tools/bin/sdkmanager --sdk_root=$(pwd) "platform-tools" "platforms;android-30" "build-tools;30.0.3"
+
+    - name: Create Android project
+      run: |
+        mkdir -p PeDitX/app/src/main/res
+        mkdir -p PeDitX/app/src/main/res/drawable
+        mkdir -p PeDitX/app/src/main/res/layout
+
+        # Download the splash screen image
+        curl -o PeDitX/app/src/main/res/drawable/splash.png https://raw.githubusercontent.com/peditx/iranIPS/refs/heads/main/.files/apps/splash.png
+
+        # Create splash screen layout
+        echo "<?xml version=\"1.0\" encoding=\"utf-8\"?>
+        <RelativeLayout xmlns:android=\"http://schemas.android.com/apk/res/android\"
+            android:layout_width=\"match_parent\"
+            android:layout_height=\"match_parent\"
+            android:background=\"@drawable/splash\">
+        </RelativeLayout>" > PeDitX/app/src/main/res/layout/activity_splash.xml
+
+        # Update AndroidManifest.xml
+        echo "<?xml version=\"1.0\" encoding=\"utf-8\"?>
+        <manifest xmlns:android=\"http://schemas.android.com/apk/res/android\"
+            package=\"com.peditx.app\">
+            <application
+                android:allowBackup=\"true\"
+                android:icon=\"@mipmap/ic_launcher\"
+                android:label=\"PeDitX\"
+                android:roundIcon=\"@mipmap/ic_launcher_round\"
+                android:supportsRtl=\"true\"
+                android:theme=\"@style/Theme.AppCompat.Light.NoActionBar\">
+                <activity android:name=\".SplashActivity\"
+                    android:theme=\"@style/Theme.AppCompat.Light.NoActionBar\">
+                    <intent-filter>
+                        <action android:name=\"android.intent.action.MAIN\" />
+                        <category android:name=\"android.intent.category.LAUNCHER\" />
+                    </intent-filter>
+                </activity>
+                <activity android:name=\".MainActivity\" />
+            </application>
+        </manifest>" > PeDitX/app/src/main/AndroidManifest.xml
+
+        # Create SplashActivity.java
+        echo "package com.peditx.app;
+
+        import android.content.Intent;
+        import android.os.Bundle;
+        import android.os.Handler;
+        import androidx.appcompat.app.AppCompatActivity;
+
+        public class SplashActivity extends AppCompatActivity {
+            @Override
+            protected void onCreate(Bundle savedInstanceState) {
+                super.onCreate(savedInstanceState);
+                setContentView(R.layout.activity_splash);
+
+                new Handler().postDelayed(() -> {
+                    startActivity(new Intent(SplashActivity.this, MainActivity.class));
+                    finish();
+                }, 3000); // 3 seconds delay
+            }
+        }" > PeDitX/app/src/main/java/com/peditx/app/SplashActivity.java
+
+        # Create MainActivity.java
+        echo "package com.peditx.app;
+
+        import android.os.Bundle;
+        import android.webkit.WebSettings;
+        import android.webkit.WebView;
+        import androidx.appcompat.app.AppCompatActivity;
+
+        public class MainActivity extends AppCompatActivity {
+            @Override
+            protected void onCreate(Bundle savedInstanceState) {
+                super.onCreate(savedInstanceState);
+                WebView webView = new WebView(this);
+                WebSettings webSettings = webView.getSettings();
+                webSettings.setJavaScriptEnabled(true);
+                webSettings.setDomStorageEnabled(true);
+                webView.setWebViewClient(new WebViewClient());
+                webView.loadUrl(\"${{ github.event.inputs.website_url }}\");
+                setContentView(webView);
+            }
+        }" > PeDitX/app/src/main/java/com/peditx/app/MainActivity.java
+
+    - name: Build APK
+      run: |
+        cd PeDitX
+        ../android-sdk/cmdline-tools/bin/sdkmanager --sdk_root=$(pwd)/../android-sdk "build-tools;30.0.3"
+        ../android-sdk/cmdline-tools/bin/sdkmanager --sdk_root=$(pwd)/../android-sdk "platforms;android-30"
+        ./gradlew assembleDebug
+
+    - name: Upload APK as artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: PeDitX
+        path: PeDitX/app/build/outputs/apk/debug/app-debug.apk
