@@ -29,53 +29,47 @@ jobs:
 
     - name: Download and install Android SDK
       run: |
-        mkdir -p android-sdk
-        cd android-sdk
+        mkdir -p $HOME/android-sdk
+        cd $HOME/android-sdk
         curl -o sdk-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-6609375_latest.zip
-        unzip sdk-tools.zip
-        yes | ./cmdline-tools/bin/sdkmanager --sdk_root=$(pwd) "platform-tools" "platforms;android-30" "build-tools;30.0.3"
+        unzip sdk-tools.zip -d cmdline-tools
+        export ANDROID_HOME=$HOME/android-sdk
+        export PATH=$ANDROID_HOME/cmdline-tools/bin:$ANDROID_HOME/platform-tools:$PATH
+        yes | $ANDROID_HOME/cmdline-tools/bin/sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-30" "build-tools;30.0.3"
 
-    - name: Create Android project
+    - name: Set up Android project
       run: |
-        mkdir -p PeDitX/app/src/main/res
-        mkdir -p PeDitX/app/src/main/res/drawable
-        mkdir -p PeDitX/app/src/main/res/layout
+        mkdir -p PeDitX
+        cd PeDitX
+        curl -o gradle-wrapper.zip https://services.gradle.org/distributions/gradle-7.3.3-bin.zip
+        unzip gradle-wrapper.zip
+        mkdir -p app/src/main/{java/com/peditx/app,res/drawable,res/layout}
+        
+        # Add splash screen image
+        curl -o app/src/main/res/drawable/splash.png https://raw.githubusercontent.com/peditx/iranIPS/refs/heads/main/.files/apps/splash.png
 
-        # Download the splash screen image
-        curl -o PeDitX/app/src/main/res/drawable/splash.png https://raw.githubusercontent.com/peditx/iranIPS/refs/heads/main/.files/apps/splash.png
-
-        # Create splash screen layout
-        echo "<?xml version=\"1.0\" encoding=\"utf-8\"?>
-        <RelativeLayout xmlns:android=\"http://schemas.android.com/apk/res/android\"
-            android:layout_width=\"match_parent\"
-            android:layout_height=\"match_parent\"
-            android:background=\"@drawable/splash\">
-        </RelativeLayout>" > PeDitX/app/src/main/res/layout/activity_splash.xml
-
-        # Update AndroidManifest.xml
-        echo "<?xml version=\"1.0\" encoding=\"utf-8\"?>
-        <manifest xmlns:android=\"http://schemas.android.com/apk/res/android\"
-            package=\"com.peditx.app\">
+        # Add AndroidManifest.xml
+        cat <<EOL > app/src/main/AndroidManifest.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.peditx.app">
             <application
-                android:allowBackup=\"true\"
-                android:icon=\"@mipmap/ic_launcher\"
-                android:label=\"PeDitX\"
-                android:roundIcon=\"@mipmap/ic_launcher_round\"
-                android:supportsRtl=\"true\"
-                android:theme=\"@style/Theme.AppCompat.Light.NoActionBar\">
-                <activity android:name=\".SplashActivity\"
-                    android:theme=\"@style/Theme.AppCompat.Light.NoActionBar\">
+                android:allowBackup="true"
+                android:icon="@drawable/splash"
+                android:label="PeDitX"
+                android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+                <activity android:name=".SplashActivity">
                     <intent-filter>
-                        <action android:name=\"android.intent.action.MAIN\" />
-                        <category android:name=\"android.intent.category.LAUNCHER\" />
+                        <action android:name="android.intent.action.MAIN" />
+                        <category android:name="android.intent.category.LAUNCHER" />
                     </intent-filter>
                 </activity>
-                <activity android:name=\".MainActivity\" />
             </application>
-        </manifest>" > PeDitX/app/src/main/AndroidManifest.xml
+        </manifest>
+        EOL
 
-        # Create SplashActivity.java
-        echo "package com.peditx.app;
+        # Add SplashActivity.java
+        cat <<EOL > app/src/main/java/com/peditx/app/SplashActivity.java
+        package com.peditx.app;
 
         import android.content.Intent;
         import android.os.Bundle;
@@ -93,14 +87,17 @@ jobs:
                     finish();
                 }, 3000); // 3 seconds delay
             }
-        }" > PeDitX/app/src/main/java/com/peditx/app/SplashActivity.java
+        }
+        EOL
 
-        # Create MainActivity.java
-        echo "package com.peditx.app;
+        # Add MainActivity.java
+        cat <<EOL > app/src/main/java/com/peditx/app/MainActivity.java
+        package com.peditx.app;
 
         import android.os.Bundle;
         import android.webkit.WebSettings;
         import android.webkit.WebView;
+        import android.webkit.WebViewClient;
         import androidx.appcompat.app.AppCompatActivity;
 
         public class MainActivity extends AppCompatActivity {
@@ -112,16 +109,48 @@ jobs:
                 webSettings.setJavaScriptEnabled(true);
                 webSettings.setDomStorageEnabled(true);
                 webView.setWebViewClient(new WebViewClient());
-                webView.loadUrl(\"${{ github.event.inputs.website_url }}\");
+                webView.loadUrl("${{ github.event.inputs.website_url }}");
                 setContentView(webView);
             }
-        }" > PeDitX/app/src/main/java/com/peditx/app/MainActivity.java
+        }
+        EOL
+
+        # Add build.gradle for the app
+        cat <<EOL > app/build.gradle
+        plugins {
+            id 'com.android.application'
+        }
+
+        android {
+            compileSdkVersion 30
+            defaultConfig {
+                applicationId "com.peditx.app"
+                minSdkVersion 21
+                targetSdkVersion 30
+                versionCode 1
+                versionName "1.0"
+            }
+            buildTypes {
+                release {
+                    minifyEnabled false
+                }
+            }
+        }
+
+        dependencies {
+            implementation 'androidx.appcompat:appcompat:1.2.0'
+            implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
+        }
+        EOL
+
+        # Add gradle-wrapper.properties
+        cat <<EOL > gradle/wrapper/gradle-wrapper.properties
+        distributionUrl=https\://services.gradle.org/distributions/gradle-7.3.3-bin.zip
+        EOL
 
     - name: Build APK
       run: |
         cd PeDitX
-        ../android-sdk/cmdline-tools/bin/sdkmanager --sdk_root=$(pwd)/../android-sdk "build-tools;30.0.3"
-        ../android-sdk/cmdline-tools/bin/sdkmanager --sdk_root=$(pwd)/../android-sdk "platforms;android-30"
         ./gradlew assembleDebug
 
     - name: Upload APK as artifact
