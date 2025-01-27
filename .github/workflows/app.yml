@@ -51,8 +51,7 @@ jobs:
 
     - name: Create Android project structure
       run: |
-        mkdir -p PeDitX/app/src/main/res/drawable
-        mkdir -p PeDitX/app/src/main/res/layout
+        mkdir -p PeDitX/app/src/main/res
         mkdir -p PeDitX/app/src/main/java/com/peditx/app
 
         # Create AndroidManifest.xml
@@ -66,37 +65,15 @@ jobs:
                 android:roundIcon=\"@mipmap/ic_launcher_round\"
                 android:supportsRtl=\"true\"
                 android:theme=\"@style/Theme.AppCompat.Light.NoActionBar\">
-                <activity android:name=\".SplashActivity\"
+                <activity android:name=\".MainActivity\"
                     android:theme=\"@style/Theme.AppCompat.Light.NoActionBar\">
                     <intent-filter>
                         <action android:name=\"android.intent.action.MAIN\" />
                         <category android:name=\"android.intent.category.LAUNCHER\" />
                     </intent-filter>
                 </activity>
-                <activity android:name=\".MainActivity\" />
             </application>
         </manifest>" > PeDitX/app/src/main/AndroidManifest.xml
-
-        # Create SplashActivity.java
-        echo "package com.peditx.app;
-
-        import android.content.Intent;
-        import android.os.Bundle;
-        import android.os.Handler;
-        import androidx.appcompat.app.AppCompatActivity;
-
-        public class SplashActivity extends AppCompatActivity {
-            @Override
-            protected void onCreate(Bundle savedInstanceState) {
-                super.onCreate(savedInstanceState);
-                setContentView(R.layout.activity_splash);
-
-                new Handler().postDelayed(() -> {
-                    startActivity(new Intent(SplashActivity.this, MainActivity.class));
-                    finish();
-                }, 3000); // 3 seconds delay
-            }
-        }" > PeDitX/app/src/main/java/com/peditx/app/SplashActivity.java
 
         # Create MainActivity.java
         echo "package com.peditx.app;
@@ -120,14 +97,6 @@ jobs:
                 setContentView(webView);
             }
         }" > PeDitX/app/src/main/java/com/peditx/app/MainActivity.java
-
-        # Create activity_splash.xml
-        echo "<?xml version=\"1.0\" encoding=\"utf-8\"?>
-        <RelativeLayout xmlns:android=\"http://schemas.android.com/apk/res/android\"
-            android:layout_width=\"match_parent\"
-            android:layout_height=\"match_parent\"
-            android:background=\"@drawable/splash\">
-        </RelativeLayout>" > PeDitX/app/src/main/res/layout/activity_splash.xml
 
         # Create build.gradle for app
         echo "plugins {
@@ -161,6 +130,10 @@ jobs:
 
         # Create gradle.properties
         echo "org.gradle.jvmargs=-Xmx2048m" > PeDitX/gradle.properties
+
+        # Create gradle wrapper
+        cd PeDitX
+        gradle wrapper --gradle-version 7.0.2
 
     - name: Build APK
       run: |
