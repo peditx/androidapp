@@ -29,13 +29,28 @@ jobs:
 
     - name: Download and install Android SDK
       run: |
-        mkdir -p $HOME/android-sdk
+        # Create directories for Android SDK
+        mkdir -p $HOME/android-sdk/cmdline-tools/latest
         cd $HOME/android-sdk
-        curl -o sdk-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-6609375_latest.zip
-        unzip sdk-tools.zip -d cmdline-tools
+        
+        # Download Android SDK command line tools
+        curl -o sdk-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+        unzip sdk-tools.zip -d cmdline-tools/latest
+        rm sdk-tools.zip
+
+        # Set environment variables
         export ANDROID_HOME=$HOME/android-sdk
-        export PATH=$ANDROID_HOME/cmdline-tools/bin:$ANDROID_HOME/platform-tools:$PATH
-        yes | $ANDROID_HOME/cmdline-tools/bin/sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-30" "build-tools;30.0.3"
+        export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
+        
+        # Install required components
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-30" "build-tools;30.0.3"
+
+    - name: Verify SDK installation
+      run: |
+        export ANDROID_HOME=$HOME/android-sdk
+        export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
+        sdkmanager --list
 
     - name: Set up Android project
       run: |
