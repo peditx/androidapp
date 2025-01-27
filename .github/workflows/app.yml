@@ -6,7 +6,7 @@ on:
       website_url:
         description: 'URL of the website to convert to APK'
         required: true
-        default: 'http://peditxrt.lan/'
+        default: 'https://example.com'
 
 jobs:
   convert-to-apk:
@@ -42,31 +42,20 @@ jobs:
         rm sdk-tools.zip
 
         # Set environment variables
-        export ANDROID_HOME=$HOME/android-sdk
-        export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
+        echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+        echo "$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools:$PATH" >> $GITHUB_ENV
 
         # Accept licenses and install necessary components
-        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
-        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3"
+        yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
+        $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3"
 
-    - name: Create Android project
+    - name: Create Android project structure
       run: |
-        mkdir -p PeDitX/app/src/main/res
         mkdir -p PeDitX/app/src/main/res/drawable
         mkdir -p PeDitX/app/src/main/res/layout
+        mkdir -p PeDitX/app/src/main/java/com/peditx/app
 
-        # Download the splash screen image
-        curl -o PeDitX/app/src/main/res/drawable/splash.png https://raw.githubusercontent.com/peditx/iranIPS/refs/heads/main/.files/apps/splash.png
-
-        # Create splash screen layout
-        echo "<?xml version=\"1.0\" encoding=\"utf-8\"?>
-        <RelativeLayout xmlns:android=\"http://schemas.android.com/apk/res/android\"
-            android:layout_width=\"match_parent\"
-            android:layout_height=\"match_parent\"
-            android:background=\"@drawable/splash\">
-        </RelativeLayout>" > PeDitX/app/src/main/res/layout/activity_splash.xml
-
-        # Update AndroidManifest.xml
+        # Create AndroidManifest.xml
         echo "<?xml version=\"1.0\" encoding=\"utf-8\"?>
         <manifest xmlns:android=\"http://schemas.android.com/apk/res/android\"
             package=\"com.peditx.app\">
@@ -132,11 +121,50 @@ jobs:
             }
         }" > PeDitX/app/src/main/java/com/peditx/app/MainActivity.java
 
+        # Create activity_splash.xml
+        echo "<?xml version=\"1.0\" encoding=\"utf-8\"?>
+        <RelativeLayout xmlns:android=\"http://schemas.android.com/apk/res/android\"
+            android:layout_width=\"match_parent\"
+            android:layout_height=\"match_parent\"
+            android:background=\"@drawable/splash\">
+        </RelativeLayout>" > PeDitX/app/src/main/res/layout/activity_splash.xml
+
+        # Create build.gradle for app
+        echo "plugins {
+            id 'com.android.application'
+        }
+
+        android {
+            compileSdkVersion 30
+            defaultConfig {
+                applicationId \"com.peditx.app\"
+                minSdkVersion 21
+                targetSdkVersion 30
+                versionCode 1
+                versionName \"1.0\"
+            }
+            buildTypes {
+                release {
+                    minifyEnabled false
+                    proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+                }
+            }
+        }
+
+        dependencies {
+            implementation 'androidx.appcompat:appcompat:1.3.1'
+            implementation 'androidx.constraintlayout:constraintlayout:2.1.0'
+}" > PeDitX/app/build.gradle
+
+        # Create settings.gradle
+        echo "include ':app'" > PeDitX/settings.gradle
+
+        # Create gradle.properties
+        echo "org.gradle.jvmargs=-Xmx2048m" > PeDitX/gradle.properties
+
     - name: Build APK
       run: |
         cd PeDitX
-        export ANDROID_HOME=$HOME/android-sdk
-        export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
         ./gradlew assembleDebug
 
     - name: Upload APK as artifact
