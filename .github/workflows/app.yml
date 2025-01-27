@@ -43,7 +43,7 @@ jobs:
 
           # Set environment variables
           echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
-          echo "$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools:$PATH" >> $GITHUB_ENV
+          echo "PATH=$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools:$PATH" >> $GITHUB_ENV
 
           # Accept licenses and install necessary components
           yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
