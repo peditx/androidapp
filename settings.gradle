@@ -1,0 +1,16 @@
+pluginManagement {
+    repositories {
+        google()  // افزودن مخزن Google
+        mavenCentral()  // افزودن مخزن Maven Central
+        gradlePluginPortal()  // افزودن مخزن Gradle Plugin Portal
+    }
+}
+
+dependencyResolutionManagement {
+    repositories {
+        google()  // افزودن مخزن Google
+        mavenCentral()  // افزودن مخزن Maven Central
+    }
+}
+
+include ':app'
