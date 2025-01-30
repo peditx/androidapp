@@ -29,23 +29,14 @@ jobs:
 
       - name: Download and install Android SDK
         run: |
-          # Create base directories
           mkdir -p $HOME/android-sdk/cmdline-tools
           cd $HOME/android-sdk/cmdline-tools
-
-          # Download Android SDK Command Line Tools
           curl -o sdk-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-
-          # Extract files into cmdline-tools folder
           unzip sdk-tools.zip -d $HOME/android-sdk/cmdline-tools
           mv $HOME/android-sdk/cmdline-tools/cmdline-tools $HOME/android-sdk/cmdline-tools/latest
           rm sdk-tools.zip
-
-          # Set environment variables
           echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
           echo "PATH=$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools:$PATH" >> $GITHUB_ENV
-
-          # Accept licenses and install necessary components
           yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
           $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3"
 
@@ -54,7 +45,6 @@ jobs:
           mkdir -p PeDitX/app/src/main/res
           mkdir -p PeDitX/app/src/main/java/com/peditx/app
 
-          # Create AndroidManifest.xml
           echo "<?xml version=\"1.0\" encoding=\"utf-8\"?>
           <manifest xmlns:android=\"http://schemas.android.com/apk/res/android\"
               package=\"com.peditx.app\">
@@ -75,7 +65,6 @@ jobs:
               </application>
           </manifest>" > PeDitX/app/src/main/AndroidManifest.xml
 
-          # Create MainActivity.java
           echo "package com.peditx.app;
 
           import android.os.Bundle;
@@ -98,7 +87,6 @@ jobs:
               }
           }" > PeDitX/app/src/main/java/com/peditx/app/MainActivity.java
 
-          # Create build.gradle for app
           echo "buildscript {
               repositories {
                   google()
@@ -141,7 +129,6 @@ jobs:
               implementation 'androidx.constraintlayout:constraintlayout:2.1.0'
           }" > PeDitX/app/build.gradle
 
-          # Create settings.gradle
           echo "pluginManagement {
               repositories {
                   google()
@@ -159,17 +146,15 @@ jobs:
 
           include ':app'" > PeDitX/settings.gradle
 
-          # Create gradle.properties
           echo "org.gradle.jvmargs=-Xmx2048m" > PeDitX/gradle.properties
 
-          # Create gradle wrapper
           cd PeDitX
           gradle wrapper --gradle-version 7.0.2
 
       - name: Build APK
         run: |
           cd PeDitX
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK as artifact
         uses: actions/upload-artifact@v3
