@@ -85,6 +85,10 @@ jobs:
               send "/usr/lib/jvm/java-17-openjdk-amd64\r"
               exp_continue
             }
+            -re {Path to your existing Android SDK.*} {
+              send "/usr/lib/android-sdk\r"
+              exp_continue
+            }
             -re {Do you want Bubblewrap to install the Android SDK.*\(Y/n\)} {
               send "Y\r"
               exp_continue
@@ -98,6 +102,7 @@ jobs:
           EOF
           chmod +x init.expect
           ./init.expect
+
 
 
       # 9. ساخت APK (امیدواریم پس از init صحیح، مرحله build بدون پرسش اجرا شود)
