@@ -9,11 +9,11 @@ jobs:
   build-apk:
     runs-on: ubuntu-latest
     steps:
-      # 1. دریافت سورس کد
+      # 1. Checkout سورس کد
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2. نصب Node.js
+      # 2. Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
@@ -60,16 +60,16 @@ jobs:
           }
           EOF
 
-      # 7. ایجاد (initialize) پروژه Bubblewrap  
-      # با نصب JDK قبلی، اکنون به Bubblewrap بگوییم که از JDK نصب‌شده استفاده کند.
+      # 7. ایجاد (initialize) پروژه Bubblewrap در حالت غیر تعاملی
       - name: Initialize Bubblewrap project
-        run: echo "No" | bubblewrap init --overwrite --config=bubblewrap-config.json
+        run: |
+          echo -e "No\n/usr/lib/jvm/java-17-openjdk-amd64\n" | bubblewrap init --overwrite --config=bubblewrap-config.json
 
       # 8. ساخت فایل APK
       - name: Build APK using Bubblewrap
         run: bubblewrap build
 
-      # 9. ایجاد یک ریلیز در GitHub
+      # 9. ایجاد ریلیز در GitHub
       - name: Create GitHub Release
         id: create_release
         uses: ncipollo/release-action@v1
