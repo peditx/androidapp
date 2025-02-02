@@ -9,7 +9,7 @@ jobs:
   build-apk:
     runs-on: ubuntu-latest
     steps:
-      # 1. Checkout سورس کد
+      # 1. دریافت سورس کد
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -35,7 +35,7 @@ jobs:
           wget -O icon.png "https://raw.githubusercontent.com/peditx/iranIPS/refs/heads/main/.files/apps/icon-512x512.png"
           wget -O splash.png "https://raw.githubusercontent.com/peditx/iranIPS/refs/heads/main/.files/apps/splash.png"
 
-      # 6. ایجاد فایل پیکربندی Bubblewrap شامل مسیر JDK به صورت غیر تعاملی
+      # 6. ایجاد فایل پیکربندی Bubblewrap (بدون نیاز به تعامل برای انتخاب JDK)
       - name: Create bubblewrap configuration
         run: |
           cat <<'EOF' > bubblewrap-config.json
@@ -61,15 +61,34 @@ jobs:
           }
           EOF
 
-      # 7. اجرای Bubblewrap init به صورت غیر تعاملی (بدون پرسش)
-      - name: Initialize Bubblewrap project non-interactively
-        run: bubblewrap init --overwrite --config=bubblewrap-config.json
+      # 7. نصب expect (برای ارسال پاسخ به promptهایی که از /dev/tty می‌خوانند)
+      - name: Install expect
+        run: sudo apt-get install -y expect
 
-      # 8. ساخت APK
+      # 8. اجرای bubblewrap init به کمک expect برای پاسخ دادن به درخواست نصب Android SDK
+      - name: Initialize Bubblewrap project non-interactively using expect
+        run: |
+          cat <<'EOF' > init.expect
+          #!/usr/bin/expect -f
+          # اجرای bubblewrap init با فایل پیکربندی
+          spawn bubblewrap init --overwrite --config=bubblewrap-config.json
+          # انتظار برای سوال مربوط به نصب Android SDK
+          expect {
+            -re {Do you want Bubblewrap to install the Android SDK.*\(Y/n\)} {
+              send "Y\r"
+              exp_continue
+            }
+            eof
+          }
+          EOF
+          chmod +x init.expect
+          ./init.expect
+
+      # 9. ساخت فایل APK
       - name: Build APK using Bubblewrap
         run: bubblewrap build
 
-      # 9. ایجاد ریلیز در GitHub
+      # 10. ایجاد ریلیز در GitHub
       - name: Create GitHub Release
         id: create_release
         uses: ncipollo/release-action@v1
@@ -81,7 +100,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
 
-      # 10. آپلود فایل APK به ریلیز
+      # 11. آپلود فایل APK به ریلیز
       - name: Upload APK to Release
         uses: actions/upload-release-asset@v1
         with:
