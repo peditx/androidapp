@@ -9,31 +9,35 @@ jobs:
   build-apk:
     runs-on: ubuntu-latest
     steps:
+      # مرحله ۱: دریافت سورس کد از ریپازیتوری
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # مرحله ۲: راه‌اندازی Node.js نسخه ۱۶
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '16'
 
+      # مرحله ۳: نصب Bubblewrap CLI
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
 
-      # Use official Android setup action for reliable SDK installation
+      # مرحله ۴: نصب Android SDK
       - name: Setup Android SDK
         uses: android-actions/setup-android@v2
 
-      - name: Download icon and splash images
+      # مرحله ۵: دانلود فایل‌های گرافیکی
+      - name: Download assets
         run: |
           wget -O icon.png "https://raw.githubusercontent.com/peditx/iranIPS/main/.files/apps/icon-512x512.png"
           wget -O splash.png "https://raw.githubusercontent.com/peditx/iranIPS/main/.files/apps/splash.png"
 
-      - name: Create bubblewrap configuration
+      # مرحله ۶: ایجاد فایل پیکربندی بدون کامنت
+      - name: Create config
         run: |
           cat <<'EOF' > bubblewrap-config.json
           {
-            # Use valid public URL for TWA manifest
             "manifestUrl": "https://peditx.github.io/manifest.json",
             "name": "PeDitX",
             "launcherName": "PeDitX",
@@ -54,23 +58,23 @@ jobs:
           }
           EOF
 
-      # Initialize project without interactive prompts
-      - name: Initialize Bubblewrap project
+      # مرحله ۷: پذیرش خودکار لایسنس‌های Android
+      - name: Accept Android licenses
+        run: |
+          yes | $ANDROID_HOME/tools/bin/sdkmanager --licenses
+
+      # مرحله ۸: راه‌اندازی پروژه Bubblewrap
+      - name: Initialize project
         run: |
           bubblewrap init --non-interactive --config=bubblewrap-config.json
-          # Accept licenses automatically
-          yes | bubblewrap license --accept
 
-      - name: Build APK using Bubblewrap
+      # مرحله ۹: ساخت فایل APK
+      - name: Build APK
         run: bubblewrap build
 
-      # Correct APK path (default is current directory)
-      - name: Upload APK to Release
-        uses: actions/upload-release-asset@v1
+      # مرحله ۱۰: آپلود APK به عنوان ریلیز
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./build/app/release/*.apk
-          asset_name: PeDitX-v1.0.0.apk
-          asset_content_type: application/vnd.android.package-archive
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: peditx-apk
+          path: ./build/app/outputs/apk/release/*.apk
