@@ -1,0 +1,86 @@
+name: Build PeDitX APK
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      # گام 1: دریافت سورس کد
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # گام 2: نصب Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      # گام 3: نصب Bubblewrap CLI
+      - name: Install Bubblewrap CLI
+        run: npm install -g @bubblewrap/cli
+
+      # گام 4: دانلود تصاویر آیکون و اسپلش
+      - name: Download icon and splash images
+        run: |
+          wget -O icon.png "https://raw.githubusercontent.com/peditx/iranIPS/refs/heads/main/.files/apps/icon-512x512.png"
+          wget -O splash.png "https://raw.githubusercontent.com/peditx/iranIPS/refs/heads/main/.files/apps/splash.png"
+
+      # گام 5: ایجاد فایل پیکربندی Bubblewrap
+      - name: Create bubblewrap configuration
+        run: |
+          cat <<'EOF' > bubblewrap-config.json
+          {
+            "manifestUrl": "http://peditxos.lan",
+            "name": "PeDitX",
+            "launcherName": "PeDitX",
+            "packageId": "com.example.peditx",
+            "versionCode": 1,
+            "appVersion": "1.0.0",
+            "startUrl": "/",
+            "themeColor": "#000000",
+            "navigationColor": "#000000",
+            "display": "standalone",
+            "icons": {
+              "android": "icon.png"
+            },
+            "splashScreen": {
+              "image": "splash.png",
+              "backgroundColor": "#FFFFFF"
+            }
+          }
+          EOF
+
+      # گام 6: ایجاد (initialize) پروژه Bubblewrap
+      - name: Initialize Bubblewrap project
+        run: bubblewrap init --overwrite --config=bubblewrap-config.json
+
+      # گام 7: ساخت فایل APK
+      - name: Build APK using Bubblewrap
+        run: bubblewrap build
+
+      # گام 8: ایجاد یک ریلیز در GitHub
+      - name: Create GitHub Release
+        id: create_release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: v1.0.0
+          release_name: "PeDitX APK Release v1.0.0"
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
+
+      # گام 9: آپلود فایل APK به ریلیز
+      - name: Upload APK to Release
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./output/apk/*.apk
+          asset_name: PeDitX.apk
+          asset_content_type: application/vnd.android.package-archive
+        env:
+          GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
