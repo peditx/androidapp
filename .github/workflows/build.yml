@@ -35,7 +35,7 @@ jobs:
           wget -O icon.png "https://raw.githubusercontent.com/peditx/iranIPS/refs/heads/main/.files/apps/icon-512x512.png"
           wget -O splash.png "https://raw.githubusercontent.com/peditx/iranIPS/refs/heads/main/.files/apps/splash.png"
 
-      # 6. ایجاد فایل پیکربندی Bubblewrap (بدون نیاز به تعامل برای انتخاب JDK)
+      # 6. ایجاد فایل پیکربندی Bubblewrap (با کلید generated جهت تعیین مسیر JDK و Android SDK)
       - name: Create bubblewrap configuration
         run: |
           cat <<'EOF' > bubblewrap-config.json
@@ -50,31 +50,38 @@ jobs:
             "themeColor": "#000000",
             "navigationColor": "#000000",
             "display": "standalone",
-            "jdkPath": "/usr/lib/jvm/java-17-openjdk-amd64",
             "icons": {
               "android": "icon.png"
             },
             "splashScreen": {
               "image": "splash.png",
               "backgroundColor": "#FFFFFF"
+            },
+            "generated": {
+              "jdkPath": "/usr/lib/jvm/java-17-openjdk-amd64",
+              "androidSdkPath": "/home/runner/.bubblewrap/android_sdk"
             }
           }
           EOF
 
-      # 7. نصب expect (برای ارسال پاسخ به promptهایی که از /dev/tty می‌خوانند)
+      # 7. نصب expect (ابزار پاسخ‌دهی خودکار به promptهای خوانده‌شده از /dev/tty)
       - name: Install expect
         run: sudo apt-get install -y expect
 
-      # 8. اجرای bubblewrap init به کمک expect برای پاسخ دادن به درخواست نصب Android SDK
+      # 8. اجرای bubblewrap init به کمک expect برای پاسخ به درخواست نصب Android SDK و پذیرش شرایط
       - name: Initialize Bubblewrap project non-interactively using expect
         run: |
           cat <<'EOF' > init.expect
           #!/usr/bin/expect -f
-          # اجرای bubblewrap init با فایل پیکربندی
+          # اجرای دستور init با فایل پیکربندی
           spawn bubblewrap init --overwrite --config=bubblewrap-config.json
-          # انتظار برای سوال مربوط به نصب Android SDK
+          # وقتی prompt مربوط به نصب Android SDK ظاهر شد:
           expect {
             -re {Do you want Bubblewrap to install the Android SDK.*\(Y/n\)} {
+              send "Y\r"
+              exp_continue
+            }
+            -re {Do you agree to the Android SDK terms.*\(y/N\)} {
               send "Y\r"
               exp_continue
             }
@@ -84,7 +91,7 @@ jobs:
           chmod +x init.expect
           ./init.expect
 
-      # 9. ساخت فایل APK
+      # 9. ساخت APK (امیدواریم پس از init صحیح، مرحله build بدون پرسش اجرا شود)
       - name: Build APK using Bubblewrap
         run: bubblewrap build
 
