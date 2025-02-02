@@ -13,7 +13,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2. Setup Node.js
+      # 2. راه‌اندازی Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
@@ -35,7 +35,7 @@ jobs:
           wget -O icon.png "https://raw.githubusercontent.com/peditx/iranIPS/refs/heads/main/.files/apps/icon-512x512.png"
           wget -O splash.png "https://raw.githubusercontent.com/peditx/iranIPS/refs/heads/main/.files/apps/splash.png"
 
-      # 6. ایجاد فایل پیکربندی Bubblewrap
+      # 6. ایجاد فایل پیکربندی Bubblewrap شامل مسیر JDK به صورت غیر تعاملی
       - name: Create bubblewrap configuration
         run: |
           cat <<'EOF' > bubblewrap-config.json
@@ -50,6 +50,7 @@ jobs:
             "themeColor": "#000000",
             "navigationColor": "#000000",
             "display": "standalone",
+            "jdkPath": "/usr/lib/jvm/java-17-openjdk-amd64",
             "icons": {
               "android": "icon.png"
             },
@@ -60,12 +61,11 @@ jobs:
           }
           EOF
 
-      # 7. ایجاد (initialize) پروژه Bubblewrap در حالت غیر تعاملی
-      - name: Initialize Bubblewrap project
-        run: |
-          echo -e "No\n/usr/lib/jvm/java-17-openjdk-amd64\n" | bubblewrap init --overwrite --config=bubblewrap-config.json
+      # 7. اجرای Bubblewrap init به صورت غیر تعاملی (بدون پرسش)
+      - name: Initialize Bubblewrap project non-interactively
+        run: bubblewrap init --overwrite --config=bubblewrap-config.json
 
-      # 8. ساخت فایل APK
+      # 8. ساخت APK
       - name: Build APK using Bubblewrap
         run: bubblewrap build
 
