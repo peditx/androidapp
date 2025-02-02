@@ -69,6 +69,7 @@ jobs:
       - name: Initialize Bubblewrap project
         run: |
           export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
+          echo "Using JAVA_HOME: $JAVA_HOME"
           bubblewrap init --overwrite --config=bubblewrap-config.json <<EOF
           No
           Y
