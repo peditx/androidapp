@@ -23,12 +23,11 @@ jobs:
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
 
-      # 4. نصب OpenJDK 17 و تنظیم JAVA_HOME
+      # 4. نصب OpenJDK 17
       - name: Install OpenJDK 17
         run: |
           sudo apt-get update
           sudo apt-get install -y openjdk-17-jdk
-          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
 
       # 5. دانلود تصاویر آیکون و اسپلش
       - name: Download icon and splash images
@@ -36,7 +35,7 @@ jobs:
           wget -O icon.png "https://raw.githubusercontent.com/peditx/iranIPS/refs/heads/main/.files/apps/icon-512x512.png"
           wget -O splash.png "https://raw.githubusercontent.com/peditx/iranIPS/refs/heads/main/.files/apps/splash.png"
 
-      # 6. ایجاد فایل پیکربندی Bubblewrap
+      # 6. ایجاد فایل پیکربندی Bubblewrap (با کلید generated جهت تعیین مسیر JDK و Android SDK)
       - name: Create bubblewrap configuration
         run: |
           cat <<'EOF' > bubblewrap-config.json
@@ -65,23 +64,38 @@ jobs:
           }
           EOF
 
-      # 7. اجرای bubblewrap init به صورت غیرتعاملی
-      - name: Initialize Bubblewrap project
-        run: |
-          export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
-          echo "Using JAVA_HOME: $JAVA_HOME"
-          bubblewrap init --overwrite --config=bubblewrap-config.json <<EOF
-          No
-          Y
-          Y
-          $JAVA_HOME
-          EOF
+      # 7. نصب expect (ابزار پاسخ‌دهی خودکار به promptهای خوانده‌شده از /dev/tty)
+      - name: Install expect
+        run: sudo apt-get install -y expect
 
-      # 8. ساخت APK
+      # 8. اجرای bubblewrap init به کمک expect برای پاسخ به درخواست نصب Android SDK و پذیرش شرایط
+      - name: Initialize Bubblewrap project non-interactively using expect
+        run: |
+          cat <<'EOF' > init.expect
+          #!/usr/bin/expect -f
+          # اجرای دستور init با فایل پیکربندی
+          spawn bubblewrap init --overwrite --config=bubblewrap-config.json
+          # وقتی prompt مربوط به نصب Android SDK ظاهر شد:
+          expect {
+            -re {Do you want Bubblewrap to install the Android SDK.*\(Y/n\)} {
+              send "Y\r"
+              exp_continue
+            }
+            -re {Do you agree to the Android SDK terms.*\(y/N\)} {
+              send "Y\r"
+              exp_continue
+            }
+            eof
+          }
+          EOF
+          chmod +x init.expect
+          ./init.expect
+
+      # 9. ساخت APK (امیدواریم پس از init صحیح، مرحله build بدون پرسش اجرا شود)
       - name: Build APK using Bubblewrap
         run: bubblewrap build
 
-      # 9. ایجاد ریلیز در GitHub
+      # 10. ایجاد ریلیز در GitHub
       - name: Create GitHub Release
         id: create_release
         uses: ncipollo/release-action@v1
@@ -93,12 +107,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
 
-      # 10. آپلود فایل APK به ریلیز
+      # 11. آپلود فایل APK به ریلیز
       - name: Upload APK to Release
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./output/app-release-signed.apk
+          asset_path: ./output/apk/*.apk
           asset_name: PeDitX.apk
           asset_content_type: application/vnd.android.package-archive
         env:
