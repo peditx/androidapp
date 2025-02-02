@@ -9,36 +9,38 @@ jobs:
   build-apk:
     runs-on: ubuntu-latest
     steps:
-      # مرحله ۱: دریافت سورس کد از ریپازیتوری
+      # 1. دریافت سورس کد
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # مرحله ۲: راه‌اندازی Node.js نسخه ۱۶
+      # 2. راه‌اندازی Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '16'
 
-      # مرحله ۳: نصب Bubblewrap CLI
+      # 3. نصب Bubblewrap CLI
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
 
-      # مرحله ۴: نصب Android SDK
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v2
-
-      # مرحله ۵: دانلود فایل‌های گرافیکی
-      - name: Download assets
+      # 4. نصب OpenJDK 17
+      - name: Install OpenJDK 17
         run: |
-          wget -O icon.png "https://raw.githubusercontent.com/peditx/iranIPS/main/.files/apps/icon-512x512.png"
-          wget -O splash.png "https://raw.githubusercontent.com/peditx/iranIPS/main/.files/apps/splash.png"
+          sudo apt-get update
+          sudo apt-get install -y openjdk-17-jdk
 
-      # مرحله ۶: ایجاد فایل پیکربندی بدون کامنت
-      - name: Create config
+      # 5. دانلود تصاویر آیکون و اسپلش
+      - name: Download icon and splash images
+        run: |
+          wget -O icon.png "https://raw.githubusercontent.com/peditx/iranIPS/refs/heads/main/.files/apps/icon-512x512.png"
+          wget -O splash.png "https://raw.githubusercontent.com/peditx/iranIPS/refs/heads/main/.files/apps/splash.png"
+
+      # 6. ایجاد فایل پیکربندی Bubblewrap (با کلید generated جهت تعیین مسیر JDK و Android SDK)
+      - name: Create bubblewrap configuration
         run: |
           cat <<'EOF' > bubblewrap-config.json
           {
-            "manifestUrl": "https://peditx.github.io/manifest.json",
+            "manifestUrl": "http://peditxos.lan",
             "name": "PeDitX",
             "launcherName": "PeDitX",
             "packageId": "com.example.peditx",
@@ -54,27 +56,64 @@ jobs:
             "splashScreen": {
               "image": "splash.png",
               "backgroundColor": "#FFFFFF"
+            },
+            "generated": {
+              "jdkPath": "/usr/lib/jvm/java-17-openjdk-amd64",
+              "androidSdkPath": "/home/runner/.bubblewrap/android_sdk"
             }
           }
           EOF
 
-      # مرحله ۷: پذیرش خودکار لایسنس‌های Android
-      - name: Accept Android licenses
-        run: |
-          yes | $ANDROID_HOME/tools/bin/sdkmanager --licenses
+      # 7. نصب expect (ابزار پاسخ‌دهی خودکار به promptهای خوانده‌شده از /dev/tty)
+      - name: Install expect
+        run: sudo apt-get install -y expect
 
-      # مرحله ۸: راه‌اندازی پروژه Bubblewrap
-      - name: Initialize project
+      # 8. اجرای bubblewrap init به کمک expect برای پاسخ به درخواست نصب Android SDK و پذیرش شرایط
+      - name: Initialize Bubblewrap project non-interactively using expect
         run: |
-          bubblewrap init --non-interactive --config=bubblewrap-config.json
+          cat <<'EOF' > init.expect
+          #!/usr/bin/expect -f
+          # اجرای دستور init با فایل پیکربندی
+          spawn bubblewrap init --overwrite --config=bubblewrap-config.json
+          # وقتی prompt مربوط به نصب Android SDK ظاهر شد:
+          expect {
+            -re {Do you want Bubblewrap to install the Android SDK.*\(Y/n\)} {
+              send "Y\r"
+              exp_continue
+            }
+            -re {Do you agree to the Android SDK terms.*\(y/N\)} {
+              send "Y\r"
+              exp_continue
+            }
+            eof
+          }
+          EOF
+          chmod +x init.expect
+          ./init.expect
 
-      # مرحله ۹: ساخت فایل APK
-      - name: Build APK
+      # 9. ساخت APK (امیدواریم پس از init صحیح، مرحله build بدون پرسش اجرا شود)
+      - name: Build APK using Bubblewrap
         run: bubblewrap build
 
-      # مرحله ۱۰: آپلود APK به عنوان ریلیز
-      - name: Upload APK
-        uses: actions/upload-artifact@v3
+      # 10. ایجاد ریلیز در GitHub
+      - name: Create GitHub Release
+        id: create_release
+        uses: ncipollo/release-action@v1
         with:
-          name: peditx-apk
-          path: ./build/app/outputs/apk/release/*.apk
+          tag: v1.0.0
+          release_name: "PeDitX APK Release v1.0.0"
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
+
+      # 11. آپلود فایل APK به ریلیز
+      - name: Upload APK to Release
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./output/apk/*.apk
+          asset_name: PeDitX.apk
+          asset_content_type: application/vnd.android.package-archive
+        env:
+          GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
