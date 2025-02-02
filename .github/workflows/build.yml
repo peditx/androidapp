@@ -68,7 +68,7 @@ jobs:
       - name: Install expect
         run: sudo apt-get install -y expect
 
-      # 8. اجرای bubblewrap init به کمک expect برای پاسخ به درخواست نصب Android SDK و پذیرش شرایط
+      # 8. اجرای bubblewrap init به کمک expect برای پاسخ به درخواست نصب JDK و پذیرش شرایط
       - name: Initialize Bubblewrap project non-interactively using expect
         run: |
           cat <<'EOF' > init.expect
@@ -79,6 +79,10 @@ jobs:
           expect {
             -re {Do you want Bubblewrap to install the JDK.*\(Y/n\)} {
               send "No\r"
+              exp_continue
+            }
+            -re {Path to your existing JDK 17.*} {
+              send "/usr/lib/jvm/java-17-openjdk-amd64\r"
               exp_continue
             }
             -re {Do you want Bubblewrap to install the Android SDK.*\(Y/n\)} {
@@ -94,6 +98,7 @@ jobs:
           EOF
           chmod +x init.expect
           ./init.expect
+
 
       # 9. ساخت APK (امیدواریم پس از init صحیح، مرحله build بدون پرسش اجرا شود)
       - name: Build APK using Bubblewrap
