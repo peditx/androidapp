@@ -64,7 +64,7 @@ jobs:
           EOF
 
       - name: Initialize Bubblewrap project non-interactively
-        run: echo -e "N\nY\nY\n" | bubblewrap init --overwrite --config=bubblewrap-config.json
+        run: printf "No\nY\nY\n/usr/lib/jvm/java-17-openjdk-amd64\n" | bubblewrap init --overwrite --config=bubblewrap-config.json
 
       - name: Build APK using Bubblewrap
         run: bubblewrap build
