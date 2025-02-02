@@ -9,27 +9,33 @@ jobs:
   build-apk:
     runs-on: ubuntu-latest
     steps:
-      # گام 1: دریافت سورس کد
+      # 1. دریافت سورس کد
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # گام 2: نصب Node.js
+      # 2. نصب Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '16'
 
-      # گام 3: نصب Bubblewrap CLI
+      # 3. نصب Bubblewrap CLI
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
 
-      # گام 4: دانلود تصاویر آیکون و اسپلش
+      # 4. نصب OpenJDK 17
+      - name: Install OpenJDK 17
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openjdk-17-jdk
+
+      # 5. دانلود تصاویر آیکون و اسپلش
       - name: Download icon and splash images
         run: |
           wget -O icon.png "https://raw.githubusercontent.com/peditx/iranIPS/refs/heads/main/.files/apps/icon-512x512.png"
           wget -O splash.png "https://raw.githubusercontent.com/peditx/iranIPS/refs/heads/main/.files/apps/splash.png"
 
-      # گام 5: ایجاد فایل پیکربندی Bubblewrap
+      # 6. ایجاد فایل پیکربندی Bubblewrap
       - name: Create bubblewrap configuration
         run: |
           cat <<'EOF' > bubblewrap-config.json
@@ -54,15 +60,16 @@ jobs:
           }
           EOF
 
-      # گام 6: ایجاد (initialize) پروژه Bubblewrap
+      # 7. ایجاد (initialize) پروژه Bubblewrap  
+      # با نصب JDK قبلی، اکنون به Bubblewrap بگوییم که از JDK نصب‌شده استفاده کند.
       - name: Initialize Bubblewrap project
-        run: bubblewrap init --overwrite --config=bubblewrap-config.json
+        run: echo "No" | bubblewrap init --overwrite --config=bubblewrap-config.json
 
-      # گام 7: ساخت فایل APK
+      # 8. ساخت فایل APK
       - name: Build APK using Bubblewrap
         run: bubblewrap build
 
-      # گام 8: ایجاد یک ریلیز در GitHub
+      # 9. ایجاد یک ریلیز در GitHub
       - name: Create GitHub Release
         id: create_release
         uses: ncipollo/release-action@v1
@@ -74,7 +81,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
 
-      # گام 9: آپلود فایل APK به ریلیز
+      # 10. آپلود فایل APK به ریلیز
       - name: Upload APK to Release
         uses: actions/upload-release-asset@v1
         with:
