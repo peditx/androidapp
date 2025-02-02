@@ -75,8 +75,12 @@ jobs:
           #!/usr/bin/expect -f
           # اجرای دستور init با فایل پیکربندی
           spawn bubblewrap init --overwrite --config=bubblewrap-config.json
-          # وقتی prompt مربوط به نصب Android SDK ظاهر شد:
+          # وقتی prompt مربوط به نصب JDK ظاهر شد:
           expect {
+            -re {Do you want Bubblewrap to install the JDK.*\(Y/n\)} {
+              send "No\r"
+              exp_continue
+            }
             -re {Do you want Bubblewrap to install the Android SDK.*\(Y/n\)} {
               send "Y\r"
               exp_continue
