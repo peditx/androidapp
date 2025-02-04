@@ -11,7 +11,7 @@ jobs:
       
       - name: Generate Keystore
         run: |
-          keytool -genkey -keyalg RSA -alias myalias -keystore newkeystore.keystore -storepass yourpassword -validity 36000 -keysize 2048 -dname "CN=Your Name, OU=Your Org, O=Your Company, L=Your City, S=Your State, C=Your Country" -keypass yourpassword
+          keytool -genkey -keyalg RSA -alias myalias -keystore PeDitX.keystore -storepass PeD@20132013.. -validity 36000 -keysize 2048 -dname "CN=PeDitX, OU=PeDitX, O=PeDitXOS, L=fatih, S=istanbul, C=turkey" -keypass PeD@20132013..
       
       - name: Upload Keystore
         uses: actions/upload-artifact@v4
