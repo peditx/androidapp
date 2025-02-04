@@ -1,0 +1,20 @@
+name: Generate Keystore
+
+on: [push, workflow_dispatch]
+
+jobs:
+  generate-keystore:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Generate Keystore
+        run: |
+          keytool -genkey -keyalg RSA -alias myalias -keystore newkeystore.keystore -storepass yourpassword -validity 36000 -keysize 2048 -dname "CN=Your Name, OU=Your Org, O=Your Company, L=Your City, S=Your State, C=Your Country" -keypass yourpassword
+      
+      - name: Upload Keystore
+        uses: actions/upload-artifact@v4
+        with:
+          name: keystore
+          path: newkeystore.keystore
